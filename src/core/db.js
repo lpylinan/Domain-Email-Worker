@@ -52,9 +52,9 @@ export async function getLatestEmail(db, address) {
 /**
  * 分页获取邮件记录 (支持域名过滤)
  */
-export async function getEmails(db, page, pageSize, domain = null, toAddress = null) {
+export async function getEmails(db, page, pageSize, domain = null, toAddress = null, unreadOnly = false) {
   const offset = (page - 1) * pageSize;
-  let query = "SELECT message_id, from_address, to_address, subject, extracted_json, received_at FROM emails";
+  let query = "SELECT message_id, from_address, to_address, subject, extracted_json, received_at, is_read FROM emails";
   let countQuery = "SELECT COUNT(1) as total FROM emails";
   const params = [pageSize, offset];
   const countParams = [];
@@ -75,6 +75,11 @@ export async function getEmails(db, page, pageSize, domain = null, toAddress = n
     countConditions.push("to_address LIKE ?");
     params.unshift(addressPattern);
     countParams.push(addressPattern);
+  }
+
+  if (unreadOnly) {
+    conditions.push("is_read = 0");
+    countConditions.push("is_read = 0");
   }
 
   if (conditions.length > 0) {
@@ -217,6 +222,30 @@ export async function saveEmail(db, data) {
       "INSERT INTO emails (message_id, from_address, to_address, subject, extracted_json, received_at) VALUES (?, ?, ?, ?, ?, ?)"
     ).bind(...baseParams).run();
   }
+}
+
+/**
+ * 标记邮件为已读
+ */
+export async function markEmailAsRead(db, messageId) {
+  return db.prepare("UPDATE emails SET is_read = 1 WHERE message_id = ?").bind(messageId).run();
+}
+
+/**
+ * 标记所有邮件为已读（支持与列表相同的筛选条件）
+ */
+export async function markAllEmailsAsRead(db, domain = null, toAddress = null) {
+  let query = "UPDATE emails SET is_read = 1 WHERE is_read = 0";
+  const params = [];
+  if (domain) {
+    query += " AND to_address LIKE ?";
+    params.push(`%@${domain}%`);
+  }
+  if (toAddress) {
+    query += " AND to_address LIKE ?";
+    params.push(`%${toAddress}%`);
+  }
+  return db.prepare(query).bind(...params).run();
 }
 
 /**

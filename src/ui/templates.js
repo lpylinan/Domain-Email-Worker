@@ -124,6 +124,18 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
                   placeholder="输入地址或前缀"
                 />
               </div>
+              <!-- 仅未读 -->
+              <div class="flex items-center gap-2 pl-4 border-l border-slate-200 dark:border-white/5">
+                <button
+                  class="px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-200 border"
+                  :class="filterUnread ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'"
+                  @click="filterUnread = !filterUnread; page = 1; loadList()"
+                >仅未读</button>
+                <button
+                  class="px-2.5 py-1 rounded-lg text-[11px] font-medium border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-all duration-200"
+                  @click="markAllRead"
+                >全部已读</button>
+              </div>
             </div>
             <div class="flex items-center gap-2 text-[11px]">
               <button class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" @click="prevPage" :disabled="page===1">上一页</button>
@@ -132,7 +144,8 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             </div>
           </div>
           <div class="p-5 space-y-3">
-            <div class="grid grid-cols-[1.5fr,1.2fr,1.2fr,0.8fr] gap-4 px-3 text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-medium">
+            <div class="grid grid-cols-[auto,1.5fr,1.2fr,1.2fr,0.8fr] gap-4 px-3 text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-medium">
+              <div class="w-2"></div>
               <div>主题</div>
               <div>发件人</div>
               <div>收件人</div>
@@ -140,18 +153,20 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             </div>
             <div v-if="items.length===0" class="min-h-[240px] flex items-center justify-center text-xs text-slate-400">暂无邮件记录</div>
             <div v-for="item in items" :key="item.message_id" class="p-3.5 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] hover:bg-white dark:hover:bg-white/[0.04] hover:shadow-sm dark:hover:shadow-none transition-all duration-200 cursor-pointer group" @click="toggleResult(item.message_id)">
-              <div class="grid grid-cols-[1.5fr,1.2fr,1.2fr,0.8fr] gap-4 items-center">
+              <div class="grid grid-cols-[auto,1.5fr,1.2fr,1.2fr,0.8fr] gap-4 items-center">
+                <span class="w-2 h-2 rounded-full shrink-0" :class="item.is_read ? 'bg-transparent' : 'bg-indigo-500'"></span>
                 <div class="min-w-0">
                   <button
                     type="button"
-                    class="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-white transition-colors underline-offset-2 hover:underline"
+                    class="text-[13px] truncate group-hover:text-indigo-600 dark:group-hover:text-white transition-colors underline-offset-2 hover:underline"
+                    :class="item.is_read ? 'font-normal text-slate-700 dark:text-slate-200' : 'font-semibold text-slate-900 dark:text-white'"
                     @click.stop="openEmailBody(item.message_id)"
                   >{{ item.subject || '(无主题)' }}</button>
                 </div>
                 <div class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ item.from_address }}</div>
                 <div class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ item.to_address }}</div>
                 <div class="text-[11px] text-slate-500 dark:text-slate-400 text-right tabular-nums">{{ formatTime(item.received_at) }}</div>
-                <div v-if="!hasResult(item.extracted_json) || expandedResults[item.message_id]" class="col-span-4 mt-3">
+                <div v-if="!hasResult(item.extracted_json) || expandedResults[item.message_id]" class="col-span-5 mt-3">
                   <div v-if="hasResult(item.extracted_json) && expandedResults[item.message_id]" class="relative group/copy" @click.stop>
                     <div
                       class="text-[12px] bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-200 rounded-lg p-3 whitespace-pre-wrap font-mono pr-12 shadow-inner"
@@ -429,7 +444,8 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             expandedResults: {}, copyStatus: {}, isDark: true,
             apiActive: true,
             availableDomains: [], filterDomain: "",
-            filterToAddress: "", addressSearchTimer: null
+            filterToAddress: "", addressSearchTimer: null,
+            filterUnread: false
           };
         },
         computed: {
@@ -486,6 +502,7 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             let url = "/admin/emails?page=" + this.page;
             if (this.filterDomain) url += "&domain=" + this.filterDomain;
             if (this.filterToAddress) url += "&to_address=" + encodeURIComponent(this.filterToAddress);
+            if (this.filterUnread) url += "&unread=1";
             const payload = await this.requestJson(url);
             if (!payload || !payload.data) return;
             this.items = payload.data.items || [];
@@ -570,6 +587,13 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
               return;
             }
 
+            // 标记已读
+            const currentItem = this.items.find(i => i.message_id === messageId);
+            if (currentItem && !currentItem.is_read) {
+              await this.requestJson("/admin/emails/" + encodeURIComponent(messageId) + "/read", { method: "PATCH" });
+              currentItem.is_read = 1;
+            }
+
             const subject = row.subject || "(无主题)";
             const from = row.from_address || "";
             const to = row.to_address || "";
@@ -620,6 +644,16 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             }
           },
           toggleResult(messageId) { this.expandedResults[messageId] = !this.expandedResults[messageId]; },
+          async markAllRead() {
+            let url = "/admin/emails/read-all";
+            const params = [];
+            if (this.filterDomain) params.push("domain=" + this.filterDomain);
+            if (this.filterToAddress) params.push("to_address=" + encodeURIComponent(this.filterToAddress));
+            if (params.length > 0) url += "?" + params.join("&");
+            const payload = await this.requestJson(url, { method: "PATCH" });
+            if (!payload) return;
+            await this.loadList();
+          },
           async copyContent(text, messageId) {
             try {
               await navigator.clipboard.writeText(text);

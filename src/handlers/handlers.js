@@ -23,14 +23,35 @@ export async function handleEmailsLatest(url, db) {
 }
 
 /**
- * [Admin] 获取邮件列表 (带分页和域名过滤)
+ * [Admin] 获取邮件列表 (带分页、域名过滤和未读筛选)
  */
 export async function handleAdminEmails(url, db) {
   const page = clampPage(url.searchParams.get("page"));
   const domain = url.searchParams.get("domain") || null;
   const toAddress = url.searchParams.get("to_address") || null;
-  const { items, total } = await dbActions.getEmails(db, page, PAGE_SIZE, domain, toAddress);
+  const unreadOnly = url.searchParams.get("unread") === "1";
+  const { items, total } = await dbActions.getEmails(db, page, PAGE_SIZE, domain, toAddress, unreadOnly);
   return json({ page, pageSize: PAGE_SIZE, total, items });
+}
+
+/**
+ * [Admin] 标记邮件为已读
+ */
+export async function handleAdminEmailMarkRead(pathname, db) {
+  const messageId = decodeURIComponent(String(pathname || "").replace("/admin/emails/", "").replace(/\/read$/, "")).trim();
+  if (!messageId) return jsonError("invalid message id", 400);
+  await dbActions.markEmailAsRead(db, messageId);
+  return json({ ok: true });
+}
+
+/**
+ * [Admin] 标记所有邮件为已读（支持与列表相同的筛选条件）
+ */
+export async function handleAdminEmailsMarkAllRead(url, db) {
+  const domain = url.searchParams.get("domain") || null;
+  const toAddress = url.searchParams.get("to_address") || null;
+  await dbActions.markAllEmailsAsRead(db, domain, toAddress);
+  return json({ ok: true });
 }
 
 /**
