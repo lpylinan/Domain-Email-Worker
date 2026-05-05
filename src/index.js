@@ -29,6 +29,7 @@ export default {
         await message.forward(env.FORWARD_TO);
       } catch (err) {
         console.error("邮件转发失败:", err);
+
       }
     }
   },
