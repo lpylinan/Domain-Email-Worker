@@ -144,16 +144,17 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             </div>
           </div>
           <div class="p-5 space-y-3">
-            <div class="grid grid-cols-[auto,1.5fr,1.2fr,1.2fr,0.8fr] gap-4 px-3 text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-medium">
+            <div class="grid grid-cols-[auto,1.5fr,1.2fr,1.2fr,0.8fr,auto] gap-4 px-3 text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-medium">
               <div class="w-2"></div>
               <div>主题</div>
               <div>发件人</div>
               <div>收件人</div>
               <div class="text-right">已接收</div>
+              <div></div>
             </div>
             <div v-if="items.length===0" class="min-h-[240px] flex items-center justify-center text-xs text-slate-400">暂无邮件记录</div>
             <div v-for="item in items" :key="item.message_id" class="p-3.5 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] hover:bg-white dark:hover:bg-white/[0.04] hover:shadow-sm dark:hover:shadow-none transition-all duration-200 cursor-pointer group" @click="toggleResult(item.message_id)">
-              <div class="grid grid-cols-[auto,1.5fr,1.2fr,1.2fr,0.8fr] gap-4 items-center">
+              <div class="grid grid-cols-[auto,1.5fr,1.2fr,1.2fr,0.8fr,auto] gap-4 items-center">
                 <span class="w-2 h-2 rounded-full shrink-0" :class="item.is_read ? 'bg-transparent' : 'bg-indigo-500'"></span>
                 <div class="min-w-0">
                   <button
@@ -166,7 +167,12 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
                 <div class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ item.from_address }}</div>
                 <div class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ item.to_address }}</div>
                 <div class="text-[11px] text-slate-500 dark:text-slate-400 text-right tabular-nums">{{ formatTime(item.received_at) }}</div>
-                <div v-if="!hasResult(item.extracted_json) || expandedResults[item.message_id]" class="col-span-5 mt-3">
+                <button
+                  type="button"
+                  class="shrink-0 text-[10px] px-2 py-1 rounded-md border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:border-indigo-300 dark:hover:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all font-medium opacity-0 group-hover:opacity-100"
+                  @click.stop="openRawText(item.message_id)"
+                >邮件原文</button>
+                <div v-if="!hasResult(item.extracted_json) || expandedResults[item.message_id]" class="col-span-6 mt-3">
                   <div v-if="hasResult(item.extracted_json) && expandedResults[item.message_id]" class="relative group/copy" @click.stop>
                     <div
                       class="text-[12px] bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-200 rounded-lg p-3 whitespace-pre-wrap font-mono pr-12 shadow-inner"
@@ -425,7 +431,7 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
       <footer class="max-w-5xl mx-auto px-4 py-6 text-xs text-slate-500 dark:text-slate-400">
         <div class="flex items-center justify-between border-t border-slate-200 dark:border-white/10 pt-4">
           <span>© 2026 Temp Mail Console</span>
-          <a class="text-slate-400 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors" href="https://github.com/lpylinan/Domain-Email-Worker" target="_blank" rel="noreferrer">GitHub</a>
+          <a class="text-slate-400 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors" href="https://github.com/lpylinan/cloudflare-domain-email-worker" target="_blank" rel="noreferrer">GitHub</a>
         </div>
       </footer>
     </div>
@@ -641,6 +647,34 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             } else {
               bodyEl.className = "mail-body as-text";
               bodyEl.textContent = "无正文内容";
+            }
+          },
+          async openRawText(messageId) {
+            const row = await this.loadEmailDetail(messageId);
+            const rawText = row?.raw_text || "";
+            const subject = row?.subject || "(无主题)";
+
+            const win = window.open("", "_blank", "width=800,height=640");
+            if (!win) {
+              alert("浏览器拦截了弹窗，请允许当前站点弹窗后重试。");
+              return;
+            }
+
+            win.document.open();
+            win.document.write('<!DOCTYPE html><html lang="zh"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>邮件原文 - ' + subject.replace(/</g, '&lt;') + '</title><style>body{margin:0;padding:0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;background:#f8fafc;color:#0f172a}.card{max-width:800px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 4px 18px rgba(15,23,42,.06)}.head{padding:14px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}.title{margin:0;font-size:14px;font-weight:600}.copy-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;transition:all .15s}.copy-btn:hover{color:#4f46e5;border-color:#a5b4fc;background:#eef2ff}.content{padding:20px;font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:calc(100vh - 80px);overflow:auto}@media(prefers-color-scheme:dark){body{background:#09090b;color:#e2e8f0}.card{background:#0a0a0a;border-color:rgba(255,255,255,.05)}.head{border-color:rgba(255,255,255,.05)}.title{color:#fff}.copy-btn{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:#94a3b8}.copy-btn:hover{color:#fff;border-color:rgba(99,102,241,.4);background:rgba(99,102,241,.1)}}</style></head><body><div class="card"><div class="head"><h1 class="title">邮件原文</h1><button class="copy-btn" id="copy-btn">复制</button></div><pre class="content" id="raw-content"></pre></div></body></html>');
+            win.document.close();
+
+            const contentEl = win.document.getElementById("raw-content");
+            const copyBtn = win.document.getElementById("copy-btn");
+            if (contentEl) contentEl.textContent = rawText || "无原文内容";
+            if (copyBtn) {
+              copyBtn.addEventListener("click", () => {
+                const text = contentEl ? contentEl.textContent : "";
+                navigator.clipboard.writeText(text).then(() => {
+                  copyBtn.textContent = "已复制";
+                  setTimeout(() => { copyBtn.textContent = "复制"; }, 2000);
+                });
+              });
             }
           },
           toggleResult(messageId) { this.expandedResults[messageId] = !this.expandedResults[messageId]; },

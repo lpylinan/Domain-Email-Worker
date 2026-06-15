@@ -1,5 +1,5 @@
 {
-  "name": "Domain-Email-Worker",
+  "name": "cloudflare-domain-email-worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",

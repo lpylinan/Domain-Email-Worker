@@ -27,7 +27,7 @@
 
 ### 方式一：一键部署（推荐）
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/lpylinan/Domain-Email-Worker)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/lpylinan/cloudflare-domain-email-worker)
 
 > 点击上方按钮可全自动 Fork 并在你的 Cloudflare 账户上部署该项目，自动分配 D1 数据库资源。部署后别忘了按下方指南补充运行时变量（如 `ADMIN_TOKEN` 和 `API_TOKEN`）以及邮件路由。
 
@@ -57,7 +57,7 @@ npx wrangler d1 create temp-email-db
 将上一步创建 D1 数据库返回的 `database_id` 填入 `wrangler.toml`：
 
 ```toml
-name = "Domain-Email-Worker"
+name = "cloudflare-domain-email-worker"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 
@@ -124,7 +124,7 @@ npm run deploy
 
 - 在 Cloudflare 控制台左侧菜单，找到 **Email** -> **Email Routing**
 - 进入 **Routes** 配置页
-- 根据需要配置 **Catch-all address** 或具体的 **Custom addresses**（Destination 均选择 `Send to a Worker`，并选择刚才部署的 `Domain-Email-Worker`）
+- 根据需要配置 **Catch-all address** 或具体的 **Custom addresses**（Destination 均选择 `Send to a Worker`，并选择刚才部署的 `cloudflare-domain-email-worker`）
 
 > [!IMPORTANT]
 > 当你在 Cloudflare 邮件路由中将动作设置为 **"Send to a Worker"** 时，Cloudflare **不再**会自动将该邮件投递/转发到你原本的个人收件箱。Worker 会完全接管这条邮件的处理权。
